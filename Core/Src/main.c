@@ -40,6 +40,8 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+TIM_HandleTypeDef htim11;
+
 UART_HandleTypeDef huart2;
 UART_HandleTypeDef huart6;
 
@@ -52,6 +54,7 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_USART6_UART_Init(void);
+static void MX_TIM11_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -74,6 +77,68 @@ static void MX_USART6_UART_Init(void);
 #define STEP_PIN GPIO_PIN_7
 
 uint8_t answer = 0;
+
+int stepState = 0;
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+    if (htim->Instance == TIM11) {
+     	// HAL_GPIO_WritePin(ENABLE_GPIO, ENABLE_PIN, 0);
+        HAL_GPIO_WritePin(STEP_GPIO, STEP_PIN, stepState ? GPIO_PIN_SET : GPIO_PIN_RESET);
+        stepState = !stepState;
+    }
+}
+
+void set_forward_dir()
+{
+	HAL_GPIO_WritePin(DIR1_GPIO, DIR1_PIN, 1);
+	HAL_GPIO_WritePin(DIR2_GPIO, DIR2_PIN, 1);
+	HAL_GPIO_WritePin(DIR3_GPIO, DIR3_PIN, 1-1);
+	HAL_GPIO_WritePin(DIR4_GPIO, DIR4_PIN, 1-1);
+}
+void set_backward_dir()
+{
+	HAL_GPIO_WritePin(DIR1_GPIO, DIR1_PIN, 0);
+	HAL_GPIO_WritePin(DIR2_GPIO, DIR2_PIN, 0);
+	HAL_GPIO_WritePin(DIR3_GPIO, DIR3_PIN, 1-0);
+	HAL_GPIO_WritePin(DIR4_GPIO, DIR4_PIN, 1-0);
+}
+void set_left_dir()
+{
+	HAL_GPIO_WritePin(DIR1_GPIO, DIR1_PIN, 0);
+	HAL_GPIO_WritePin(DIR2_GPIO, DIR2_PIN, 1);
+	HAL_GPIO_WritePin(DIR3_GPIO, DIR3_PIN, 1-1);
+	HAL_GPIO_WritePin(DIR4_GPIO, DIR4_PIN, 1-0);
+}
+void set_right_dir()
+{
+	HAL_GPIO_WritePin(DIR1_GPIO, DIR1_PIN, 1);
+	HAL_GPIO_WritePin(DIR2_GPIO, DIR2_PIN, 0);
+	HAL_GPIO_WritePin(DIR3_GPIO, DIR3_PIN, 1-0);
+	HAL_GPIO_WritePin(DIR4_GPIO, DIR4_PIN, 1-1);
+}
+void set_ccw_dir()
+{
+	HAL_GPIO_WritePin(DIR1_GPIO, DIR1_PIN, 0);
+		HAL_GPIO_WritePin(DIR2_GPIO, DIR2_PIN, 0);
+		HAL_GPIO_WritePin(DIR3_GPIO, DIR3_PIN, 1-1);
+		HAL_GPIO_WritePin(DIR4_GPIO, DIR4_PIN, 1-1);
+}
+void set_cw_dir()
+{
+	HAL_GPIO_WritePin(DIR1_GPIO, DIR1_PIN, 1);
+		HAL_GPIO_WritePin(DIR2_GPIO, DIR2_PIN, 1);
+		HAL_GPIO_WritePin(DIR3_GPIO, DIR3_PIN, 1-0);
+		HAL_GPIO_WritePin(DIR4_GPIO, DIR4_PIN, 1-0);
+}
+void enable()
+{
+	HAL_GPIO_WritePin(ENABLE_GPIO, ENABLE_PIN, 0);
+}
+void disable()
+{
+	HAL_GPIO_WritePin(ENABLE_GPIO, ENABLE_PIN, 1);
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -106,9 +171,10 @@ int main(void)
   MX_GPIO_Init();
   MX_USART2_UART_Init();
   MX_USART6_UART_Init();
+  MX_TIM11_Init();
   /* USER CODE BEGIN 2 */
   HAL_UART_Receive_IT(&huart6, &answer, 1);
-
+  // HAL_TIM_Base_Start_IT(&htim11);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -119,7 +185,7 @@ int main(void)
   HAL_GPIO_WritePin(DIR3_GPIO, DIR3_PIN, 0);
   HAL_GPIO_WritePin(DIR4_GPIO, DIR4_PIN, 0);
 
-  HAL_GPIO_WritePin(ENABLE_GPIO, ENABLE_PIN, 1);
+  disable();
   while (1)
   {
 	  printf("hello world\n");
@@ -179,6 +245,37 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief TIM11 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM11_Init(void)
+{
+
+  /* USER CODE BEGIN TIM11_Init 0 */
+
+  /* USER CODE END TIM11_Init 0 */
+
+  /* USER CODE BEGIN TIM11_Init 1 */
+
+  /* USER CODE END TIM11_Init 1 */
+  htim11.Instance = TIM11;
+  htim11.Init.Prescaler = 39;
+  htim11.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim11.Init.Period = 2999;
+  htim11.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim11.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim11) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM11_Init 2 */
+
+  /* USER CODE END TIM11_Init 2 */
+
 }
 
 /**
@@ -310,7 +407,37 @@ PUTCHAR_PROTOTYPE
 
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef* hadc) {
-	 printf("received: %d\n", (int)answer);
+
+	printf("received: %d\n", (int)answer);
+	switch(answer)
+	{
+	case 1:
+		set_ccw_dir();
+		break;
+	case 2:
+		set_cw_dir();
+		break;
+	case 4:
+		set_forward_dir();
+		break;
+	case 8:
+		set_backward_dir();
+		break;
+	}
+	static int disabled = 0;
+	if (answer == 0 && !disabled)
+	{
+		disabled = 1;
+		disable();
+		HAL_TIM_Base_Stop_IT(&htim11);
+	}
+	else if (answer != 0 && disabled)
+	{
+		disabled = 0;
+		enable();
+		HAL_TIM_Base_Start_IT(&htim11);
+	}
+	disabled = answer == 0;
 	 HAL_UART_Receive_IT(&huart6, &answer, 1);
 
  }
