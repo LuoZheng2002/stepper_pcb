@@ -21,6 +21,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include"stdio.h"
+#include"string.h"
 
 /* USER CODE END Includes */
 
@@ -41,6 +43,8 @@
 
 /* Private variables ---------------------------------------------------------*/
 TIM_HandleTypeDef htim2;
+TIM_HandleTypeDef htim3;
+TIM_HandleTypeDef htim10;
 TIM_HandleTypeDef htim11;
 
 UART_HandleTypeDef huart2;
@@ -57,6 +61,8 @@ static void MX_USART2_UART_Init(void);
 static void MX_USART6_UART_Init(void);
 static void MX_TIM11_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_TIM3_Init(void);
+static void MX_TIM10_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -81,12 +87,26 @@ static void MX_TIM2_Init(void);
 uint8_t answer = 0;
 
 int stepState = 0;
+int PINCH_FORWARD_CCR = 205;
+int PINCH_BACKWARD_CCR = 320;
+int PAN_STOP = 302;
+int PAN_UP = 310;
+int PAN_DOWN = 295;
+
+
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     if (htim->Instance == TIM11) {
      	// HAL_GPIO_WritePin(ENABLE_GPIO, ENABLE_PIN, 0);
         HAL_GPIO_WritePin(STEP_GPIO, STEP_PIN, stepState ? GPIO_PIN_SET : GPIO_PIN_RESET);
         stepState = !stepState;
+    }
+    else if (htim->Instance == TIM10)
+    {
+
+    	TIM2->CCR1 = PINCH_BACKWARD_CCR;
+    	HAL_TIM_Base_Stop_IT(&htim10);
+
     }
 }
 
@@ -141,6 +161,7 @@ void disable()
 	HAL_GPIO_WritePin(ENABLE_GPIO, ENABLE_PIN, 1);
 }
 
+char number = 0;
 /* USER CODE END 0 */
 
 /**
@@ -175,9 +196,14 @@ int main(void)
   MX_USART6_UART_Init();
   MX_TIM11_Init();
   MX_TIM2_Init();
+  MX_TIM3_Init();
+  MX_TIM10_Init();
   /* USER CODE BEGIN 2 */
+  // HAL_TIM_Base_Start_IT(&htim10);
   HAL_UART_Receive_IT(&huart6, &answer, 1);
+  HAL_UART_Receive_IT(&huart2, &number, 1);
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
   // HAL_TIM_Base_Start_IT(&htim11);
   /* USER CODE END 2 */
 
@@ -307,6 +333,96 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 2 */
   HAL_TIM_MspPostInit(&htim2);
+
+}
+
+/**
+  * @brief TIM3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM3_Init(void)
+{
+
+  /* USER CODE BEGIN TIM3_Init 0 */
+
+  /* USER CODE END TIM3_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+
+  /* USER CODE BEGIN TIM3_Init 1 */
+
+  /* USER CODE END TIM3_Init 1 */
+  htim3.Instance = TIM3;
+  htim3.Init.Prescaler = 419;
+  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim3.Init.Period = 1999;
+  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM3_Init 2 */
+
+  /* USER CODE END TIM3_Init 2 */
+  HAL_TIM_MspPostInit(&htim3);
+
+}
+
+/**
+  * @brief TIM10 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM10_Init(void)
+{
+
+  /* USER CODE BEGIN TIM10_Init 0 */
+
+  /* USER CODE END TIM10_Init 0 */
+
+  /* USER CODE BEGIN TIM10_Init 1 */
+
+  /* USER CODE END TIM10_Init 1 */
+  htim10.Instance = TIM10;
+  htim10.Init.Prescaler = 4500;
+  htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim10.Init.Period = 9000;
+  htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim10.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim10) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM10_Init 2 */
+
+  /* USER CODE END TIM10_Init 2 */
 
 }
 
@@ -471,38 +587,69 @@ PUTCHAR_PROTOTYPE
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef* hadc) {
 
-	printf("received: %d\n", (int)answer);
-	switch(answer)
+	if (hadc == &huart2)
 	{
-	case 1:
-		set_ccw_dir();
-		break;
-	case 2:
-		set_cw_dir();
-		break;
-	case 4:
-		set_forward_dir();
-		break;
-	case 8:
-		set_backward_dir();
-		break;
-	}
-	static int disabled = 0;
-	if (answer == 0 && !disabled)
-	{
-		disabled = 1;
-		disable();
-		HAL_TIM_Base_Stop_IT(&htim11);
-	}
-	else if (answer != 0 && disabled)
-	{
-		disabled = 0;
-		enable();
-		HAL_TIM_Base_Start_IT(&htim11);
-	}
-	disabled = answer == 0;
-	 HAL_UART_Receive_IT(&huart6, &answer, 1);
+		static char numbers[4] = {0};
+		static int offset = 0;
 
+
+		if (number != '\n')
+		{
+			printf("received: %c\n", number);
+			numbers[offset++] = number;
+
+			if (offset == 3)
+			{
+				int intNum = atoi(numbers);
+				printf("set: %d\n", intNum);
+				// TIM2->CCR1 = intNum;
+				TIM3->CCR1 = intNum;
+				offset = 0;
+			}
+		}
+		HAL_UART_Receive_IT(&huart2, &number, 1);
+
+	}
+	else
+	{
+		printf("received: %d\n", (int)answer);
+		switch(answer)
+		{
+		case 1:
+			set_ccw_dir();
+			break;
+		case 2:
+			set_cw_dir();
+			break;
+		case 4:
+			set_forward_dir();
+			break;
+		case 8:
+			set_backward_dir();
+			break;
+		case 16:
+			HAL_TIM_Base_Start_IT(&htim10);
+			TIM2->CCR1 = PINCH_FORWARD_CCR;
+			break;
+		case 32:
+
+		}
+		static int disabled = 0;
+		if ((answer & 0b1111) == 0 && !disabled)
+		{
+			disabled = 1;
+			disable();
+			HAL_TIM_Base_Stop_IT(&htim11);
+		}
+		else if ((answer & 0b1111) != 0 && disabled)
+		{
+			disabled = 0;
+			enable();
+			HAL_TIM_Base_Start_IT(&htim11);
+		}
+		disabled = answer == 0;
+		 HAL_UART_Receive_IT(&huart6, &answer, 1);
+	}
  }
 /* USER CODE END 4 */
 
