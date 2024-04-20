@@ -84,6 +84,14 @@ static void MX_TIM10_Init(void);
 #define STEP_GPIO GPIOA
 #define STEP_PIN GPIO_PIN_7
 
+#define HB1_GPIO  GPIOC
+#define HB2_GPIO  GPIOC
+#define HB3_GPIO  GPIOC
+#define HB4_GPIO  GPIOC
+#define HB1_PIN  GPIO_PIN_0
+#define HB2_PIN GPIO_PIN_1
+#define HB3_PIN GPIO_PIN_2
+#define HB4_PIN GPIO_PIN_3
 uint8_t answer = 0;
 
 int stepState = 0;
@@ -92,6 +100,7 @@ int PINCH_BACKWARD_CCR = 320;
 int PAN_STOP = 302;
 int PAN_UP = 310;
 int PAN_DOWN = 295;
+
 
 
 
@@ -541,6 +550,9 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOA, LD2_Pin|GPIO_PIN_7|GPIO_PIN_8, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
@@ -551,6 +563,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PC0 PC1 PC2 PC3 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pins : LD2_Pin PA7 PA8 */
   GPIO_InitStruct.Pin = LD2_Pin|GPIO_PIN_7|GPIO_PIN_8;
@@ -613,6 +632,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef* hadc) {
 	else
 	{
 		printf("received: %d\n", (int)answer);
+		static hold = 0;
 		switch(answer)
 		{
 		case 1:
@@ -632,6 +652,27 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef* hadc) {
 			TIM2->CCR1 = PINCH_FORWARD_CCR;
 			break;
 		case 32:
+			static spinning = 0;
+
+			if (!hold)
+			{
+				hold = 1;
+				spinning = 1-spinning;
+			}
+			if (!spinning)
+			{
+				HAL_GPIO_WritePin(HB1_GPIO, HB1_PIN, 0);
+				HAL_GPIO_WritePin(HB2_GPIO, HB2_PIN, 0);
+				HAL_GPIO_WritePin(HB3_GPIO, HB3_PIN, 0);
+				HAL_GPIO_WritePin(HB4_GPIO, HB4_PIN, 0);
+			}
+			else
+			{
+				HAL_GPIO_WritePin(HB1_GPIO, HB1_PIN, 0);
+				HAL_GPIO_WritePin(HB2_GPIO, HB2_PIN, 1);
+				HAL_GPIO_WritePin(HB3_GPIO, HB3_PIN, 1);
+				HAL_GPIO_WritePin(HB4_GPIO, HB4_PIN, 0);
+			}
 
 		}
 		static int disabled = 0;
@@ -647,7 +688,11 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef* hadc) {
 			enable();
 			HAL_TIM_Base_Start_IT(&htim11);
 		}
-		disabled = answer == 0;
+		disabled = (answer & 0b1111) != 0;
+		if ((answer & 32) == 0)
+		{
+			hold = 0;
+		}
 		 HAL_UART_Receive_IT(&huart6, &answer, 1);
 	}
  }
