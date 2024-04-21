@@ -60,8 +60,8 @@ all: main-build
 main-build: stepper_pcb.elf secondary-outputs
 
 # Tool invocations
-stepper_pcb.elf stepper_pcb.map: $(OBJS) $(USER_OBJS) C:\Users\luoz\Desktop\stepper_pcb\STM32F401RETX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "stepper_pcb.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\luoz\Desktop\stepper_pcb\STM32F401RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="stepper_pcb.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+stepper_pcb.elf stepper_pcb.map: $(OBJS) $(USER_OBJS) C:\Users\luo20\Desktop\EECS373\stepper_pcb\stepper_pcb\STM32F401RETX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "stepper_pcb.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\luo20\Desktop\EECS373\stepper_pcb\stepper_pcb\STM32F401RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="stepper_pcb.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
